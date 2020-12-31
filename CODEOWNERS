@@ -76,6 +76,7 @@ homeassistant/components/brunt/* @eavanvalkenburg
 homeassistant/components/bsblan/* @liudger
 homeassistant/components/bt_smarthub/* @jxwolstenholme
 homeassistant/components/buienradar/* @mjj4791 @ties
+homeassistant/components/canada_post/* @ParitoshBh
 homeassistant/components/cast/* @emontnemery
 homeassistant/components/cert_expiry/* @Cereal2nd @jjlawren
 homeassistant/components/circuit/* @braam
