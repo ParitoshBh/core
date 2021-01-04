@@ -1,7 +1,7 @@
 {
   "domain": "canada_post",
   "name": "Canada Post",
-  "config_flow": false,
+  "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/canada_post",
   "requirements": [],
   "ssdp": [],
