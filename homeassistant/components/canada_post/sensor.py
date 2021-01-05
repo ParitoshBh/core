@@ -1,100 +1,31 @@
-from datetime import timedelta
 import logging
-
-import voluptuous as vol
-
-from homeassistant.const import HTTP_OK
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.entity import Entity
+from datetime import timedelta
 from homeassistant.util import Throttle
+from homeassistant.const import HTTP_OK
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN
+from .const import (
+    API_URL,
+    ATTRIBUTION,
+    ATTR_ATTRIBUTION,
+    ATTR_LOCATION_ADDR,
+    ATTR_DATE,
+    ATTR_TIME,
+    ATTR_TIMEZONE,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-# ATTRIBUTION = "Information provided by AfterShip"
-# ATTR_TRACKINGS = "trackings"
-
-API_URL = (
-    "https://www.canadapost.ca/trackweb/rs/track/json/package/{tracking_number}/detail"
-)
-
-CONF_TITLE = "title"
-CONF_TRACKING_NUMBER = "tracking_number"
-
-# UPDATE_TOPIC = f"{DOMAIN}_update"
-
 ICON = "mdi:package-variant-closed"
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=2)
-
-SERVICE_ADD_TRACKING = "add_tracking"
-# SERVICE_REMOVE_TRACKING = "remove_tracking"
-
-ADD_TRACKING_SERVICE_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_TRACKING_NUMBER): cv.string,
-        vol.Required(CONF_TITLE): cv.string,
-    }
-)
-
-# REMOVE_TRACKING_SERVICE_SCHEMA = vol.Schema(
-#     {vol.Required(CONF_SLUG): cv.string, vol.Required(CONF_TRACKING_NUMBER): cv.string}
-# )
+MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=15)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Transmission sensors."""
     for tracking_number, label in config_entry.options.items():
         async_add_entities([CanadaPostSensor(label, tracking_number)], True)
-
-
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Set up the Canada Post sensor platform."""
-
-    # if not aftership.meta or aftership.meta["code"] != HTTP_OK:
-    #     _LOGGER.error(
-    #         "No tracking data found. Check API key is correct: %s", aftership.meta
-    #     )
-    #     return
-    _LOGGER.debug("async setup platform")
-    # hass.data[DOMAIN] = "test_number_1"
-    # _LOGGER.debug(hass.config_entries.async_entries(DOMAIN))
-    # for entry in hass.config_entries.async_entries():
-    #     _LOGGER.debug(entry.as_dict())
-
-    async def handle_add_tracking(call):
-        """Call when a user adds a new tracking number from Home Assistant."""
-        title = call.data.get(CONF_TITLE)
-        tracking_number = call.data[CONF_TRACKING_NUMBER]
-        _LOGGER.debug(
-            "New tracking title -> " + title + " and number -> " + tracking_number
-        )
-
-        async_add_entities([CanadaPostSensor(title, tracking_number)], True)
-
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_ADD_TRACKING,
-        handle_add_tracking,
-        schema=ADD_TRACKING_SERVICE_SCHEMA,
-    )
-
-    # async def handle_remove_tracking(call):
-    #     """Call when a user removes an Aftership tracking from Home Assistant."""
-    #     slug = call.data[CONF_SLUG]
-    #     tracking_number = call.data[CONF_TRACKING_NUMBER]
-
-    #     await aftership.remove_package_tracking(slug, tracking_number)
-    #     async_dispatcher_send(hass, UPDATE_TOPIC)
-
-    # hass.services.async_register(
-    #     DOMAIN,
-    #     SERVICE_REMOVE_TRACKING,
-    #     handle_remove_tracking,
-    #     schema=REMOVE_TRACKING_SERVICE_SCHEMA,
-    # )
 
 
 class CanadaPostSensor(Entity):
@@ -120,7 +51,7 @@ class CanadaPostSensor(Entity):
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement of this entity, if any."""
-        return ""
+        return None
 
     @property
     def device_state_attributes(self):
@@ -145,46 +76,38 @@ class CanadaPostSensor(Entity):
     #         await self.async_update(no_throttle=True)
     #         self.async_write_ha_state()
 
-    # @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self, **kwargs):
         """Get the latest data from Canada Post API."""
         session = async_get_clientsession(self.hass)
         res = await session.get(API_URL.format(tracking_number=self.tracking_number))
-        # res = requests.get(API_URL.format(tracking_number=self.tracking_number))
 
-        _LOGGER.debug(res.status)
-        json_response = await res.json()
-        # _LOGGER.debug(json_response)
         status = ""
+        if res.status == HTTP_OK:
+            json_response = await res.json()
+            try:
+                event = json_response["events"][0]
 
-        try:
-            event = json_response["events"][0]
-            status = (
-                event["descEn"]
-                + " in "
-                + event["locationAddr"]["city"]
-                + ", "
-                + event["locationAddr"]["regionCd"]
-                + " on "
-                + event["datetime"]["date"]
-                + " at "
-                + event["datetime"]["time"]
-            )
-        except KeyError as err:
-            _LOGGER.warn(err)
-            status = json_response["error"]["descEn"]
+                locationAddress = event["locationAddr"]
+                status = event["descEn"]
+                self._attributes[ATTR_ATTRIBUTION] = ATTRIBUTION
+                self._attributes[ATTR_LOCATION_ADDR] = (
+                    locationAddress["city"]
+                    + ", "
+                    + locationAddress["regionCd"]
+                    + ", "
+                    + locationAddress["countryCd"]
+                )
+                self._attributes[ATTR_DATE] = event["datetime"]["date"]
+                self._attributes[ATTR_TIME] = event["datetime"]["time"]
+                self._attributes[ATTR_TIMEZONE] = event["datetime"]["zoneOffset"]
+            except KeyError:
+                status = json_response["error"]["descEn"]
+        else:
+            _LOGGER.warning("Unable to get status for " + self.tracking_number)
+
         _LOGGER.debug(status)
 
-        # if self.aftership.meta["code"] != HTTP_OK:
-        #     _LOGGER.error(
-        #         "Errors when querying AfterShip. %s", str(self.aftership.meta)
-        #     )
-        #     return
-
-        # self._attributes = {
-        #     ATTR_ATTRIBUTION: ATTRIBUTION,
-        #     **status_counts,
-        #     ATTR_TRACKINGS: trackings,
-        # }
+        self._attributes[ATTR_ATTRIBUTION] = ATTRIBUTION
 
         self._state = status

@@ -1,12 +1,9 @@
 """Config flow for Canada Post."""
-import voluptuous as vol
 import logging
-
-from homeassistant import config_entries
-from homeassistant.const import (
-    CONF_SCAN_INTERVAL,
-)
+import voluptuous as vol
 from homeassistant.core import callback
+from homeassistant import config_entries
+from homeassistant.const import CONF_SCAN_INTERVAL
 
 from .const import DOMAIN, CONF_NAME, CONF_TRACKING_NUMBERS, DEFAULT_TRACKING_NUMBERS
 
