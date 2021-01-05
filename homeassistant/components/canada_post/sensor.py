@@ -7,6 +7,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     API_URL,
+    CONF_NAME,
     ATTRIBUTION,
     ATTR_ATTRIBUTION,
     ATTR_LOCATION_ADDR,
@@ -25,16 +26,16 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=15)
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the Transmission sensors."""
     for tracking_number, label in config_entry.options.items():
-        async_add_entities([CanadaPostSensor(label, tracking_number)], True)
+        async_add_entities([CanadaPostSensor(tracking_number, label)], True)
 
 
 class CanadaPostSensor(Entity):
     """Representation of a CanadaPost sensor."""
 
-    def __init__(self, name, tracking_number):
+    def __init__(self, tracking_number, label):
         """Initialize the sensor."""
         self._attributes = {}
-        self._name = name
+        self._name = CONF_NAME + " - " + label
         self.tracking_number = tracking_number
         self._state = None
 
@@ -82,32 +83,29 @@ class CanadaPostSensor(Entity):
         session = async_get_clientsession(self.hass)
         res = await session.get(API_URL.format(tracking_number=self.tracking_number))
 
-        status = ""
+        state = ""
         if res.status == HTTP_OK:
             json_response = await res.json()
             try:
                 event = json_response["events"][0]
-
-                locationAddress = event["locationAddr"]
-                status = event["descEn"]
-                self._attributes[ATTR_ATTRIBUTION] = ATTRIBUTION
-                self._attributes[ATTR_LOCATION_ADDR] = (
-                    locationAddress["city"]
-                    + ", "
-                    + locationAddress["regionCd"]
-                    + ", "
-                    + locationAddress["countryCd"]
-                )
-                self._attributes[ATTR_DATE] = event["datetime"]["date"]
-                self._attributes[ATTR_TIME] = event["datetime"]["time"]
-                self._attributes[ATTR_TIMEZONE] = event["datetime"]["zoneOffset"]
+                state = event["descEn"]
+                self._attributes = {
+                    ATTR_ATTRIBUTION: ATTRIBUTION,
+                    ATTR_LOCATION_ADDR: "{city}, {region_code}, {country_Code}".format(
+                        city=event["locationAddr"]["city"],
+                        region_code=event["locationAddr"]["regionCd"],
+                        country_Code=event["locationAddr"]["countryCd"],
+                    ),
+                    ATTR_DATE: event["datetime"]["date"],
+                    ATTR_TIME: event["datetime"]["time"],
+                    ATTR_TIMEZONE: event["datetime"]["zoneOffset"],
+                }
             except KeyError:
-                status = json_response["error"]["descEn"]
+                state = json_response["error"]["descEn"]
+                self._attributes = {ATTR_ATTRIBUTION: ATTRIBUTION}
         else:
-            _LOGGER.warning("Unable to get status for " + self.tracking_number)
+            self._attributes = {ATTR_ATTRIBUTION: ATTRIBUTION}
+            _LOGGER.warning("Unable to fetch status for " + self.tracking_number)
+            state = "Unable to fetch status"
 
-        _LOGGER.debug(status)
-
-        self._attributes[ATTR_ATTRIBUTION] = ATTRIBUTION
-
-        self._state = status
+        self._state = state
