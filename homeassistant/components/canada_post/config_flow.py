@@ -15,9 +15,7 @@ DATA_SCHEMA = vol.Schema(
     }
 )
 
-# DATA_FLOW_IMPL = "gtasks_flow_implementation"
-
-@config_entries.HANDLERS.register(DOMAIN)
+# @config_entries.HANDLERS.register(DOMAIN)
 class CanadaPostFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle Canada Post config flow."""
 
