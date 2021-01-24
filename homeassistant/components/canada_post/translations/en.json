@@ -7,20 +7,12 @@
     "step": {
       "user": {
         "data": {
-          "access_token": "GitHub Access Token",
-          "url": "GitHub Enterprise server URL"
+          "add_another": "Add another?",
+          "path": "Tracking Number",
+          "name": "Name of Sensor"
         },
-        "description": "Enter your GitHub credentials.",
-        "title": "Authentication"
-      },
-      "repo": {
-        "data": {
-          "add_another": "Add another repo?",
-          "path": "Path to the repository e.g. home-assistant/core",
-          "name": "Name of the sensor."
-        },
-        "description": "Add a GitHub repo, check the box to add another.",
-        "title": "Add GitHub Repository"
+        "description": "Add a tracking number, check the box to add another.",
+        "title": "Add Tracking Number"
       }
     }
   },
@@ -32,9 +24,11 @@
       "init": {
         "title": "Manage Tracking Numbers",
         "data": {
-          "tracking_numbers": ""
+          "repos": "Existing Tracking Numbers: Uncheck to remove.",
+          "path": "New Tracking Number",
+          "name": "New Tracking Number Label"
         },
-        "description": "Enter multiple tracking numbers (comma separated)"
+        "description": "Remove existing tracking numbers or add a new one."
       }
     }
   }

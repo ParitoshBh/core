@@ -1,14 +1,10 @@
 {
-  "domain": "canada_post",
-  "name": "Canada Post",
-  "config_flow": true,
-  "documentation": "https://www.home-assistant.io/integrations/canada_post",
-  "requirements": [],
-  "ssdp": [],
-  "zeroconf": [],
-  "homekit": {},
-  "dependencies": [],
   "codeowners": [
     "@ParitoshBh"
-  ]
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://www.home-assistant.io/integrations/canada_post",
+  "domain": "canada_post",
+  "name": "Canada Post"
 }

@@ -7,14 +7,6 @@
     "step": {
       "user": {
         "data": {
-          "access_token": "GitHub Access Token",
-          "url": "GitHub Enterprise server URL"
-        },
-        "description": "Enter your GitHub credentials.",
-        "title": "Authentication"
-      },
-      "repo": {
-        "data": {
           "add_another": "Add another repo?",
           "path": "Path to the repository e.g. home-assistant/core",
           "name": "Name of the sensor."
@@ -30,11 +22,13 @@
     },
     "step": {
       "init": {
-        "title": "Manage Tracking Numbers",
+        "title": "Manage Repos",
         "data": {
-          "tracking_numbers": ""
+          "repos": "Existing Repos: Uncheck any repos you want to remove.",
+          "path": "New Repo: Path to the repository e.g. home-assistant-core",
+          "name": "New Repo: Name of the sensor."
         },
-        "description": "Enter multiple tracking numbers (comma separated)"
+        "description": "Remove existing repos or add a new repo."
       }
     }
   }

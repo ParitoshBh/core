@@ -1,43 +1,108 @@
-import logging
+"""GitHub sensor platform."""
 from datetime import timedelta
-from homeassistant.util import Throttle
+import logging
+from typing import Any, Callable, Dict, Optional
+
 from homeassistant.const import HTTP_OK
-from homeassistant.helpers.entity import Entity
+from homeassistant import config_entries, core
+from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.const import (
+    CONF_ACCESS_TOKEN,
+    CONF_NAME,
+    CONF_PATH,
+    CONF_URL,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.typing import (
+    ConfigType,
+    DiscoveryInfoType,
+    HomeAssistantType,
+)
+import voluptuous as vol
 
 from .const import (
-    API_URL,
-    CONF_NAME,
+    BASE_API_URL,
+    ICON,
     ATTRIBUTION,
     ATTR_ATTRIBUTION,
-    ATTR_LOCATION_ADDR,
     ATTR_DATE,
+    ATTR_LOCATION_ADDR,
     ATTR_TIME,
     ATTR_TIMEZONE,
+    CONF_REPOS,
+    DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-ICON = "mdi:package-variant-closed"
+# Time between updating data from Canada Post
+SCAN_INTERVAL = timedelta(minutes=10)
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=15)
+REPO_SCHEMA = vol.Schema(
+    {vol.Required(CONF_PATH): cv.string, vol.Optional(CONF_NAME): cv.string}
+)
+
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+        vol.Required(CONF_ACCESS_TOKEN): cv.string,
+        vol.Required(CONF_REPOS): vol.All(cv.ensure_list, [REPO_SCHEMA]),
+        vol.Optional(CONF_URL): cv.url,
+    }
+)
+
+async def async_setup_entry(
+    hass: core.HomeAssistant,
+    config_entry: config_entries.ConfigEntry,
+    async_add_entities,
+):
+    """Setup sensors from a config entry created in the integrations UI."""
+    _LOGGER.debug("Called sensor async_setup_entry")
+    config = hass.data[DOMAIN][config_entry.entry_id]
+
+    # Update our config to include new repos and remove those that have been removed
+    if config_entry.options:
+        config.update(config_entry.options)
+
+    sensors = [CanadaPostSensor(repo) for repo in config[CONF_REPOS]]
+    async_add_entities(sensors, update_before_add=True)
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the Transmission sensors."""
-    for tracking_number, label in config_entry.options.items():
-        async_add_entities([CanadaPostSensor(tracking_number, label)], True)
-
+async def async_setup_platform(
+    hass: HomeAssistantType,
+    config: ConfigType,
+    async_add_entities: Callable,
+    discovery_info: Optional[DiscoveryInfoType] = None,
+) -> None:
+    """Set up the sensor platform."""
+    # session = async_get_clientsession(hass)
+    # github = GitHubAPI(session, "requester", oauth_token=config[CONF_ACCESS_TOKEN])
+    # sensors = [GitHubRepoSensor(github, repo) for repo in config[CONF_REPOS]]
+    # async_add_entities(sensors, update_before_add=True)
 
 class CanadaPostSensor(Entity):
     """Representation of a CanadaPost sensor."""
 
-    def __init__(self, tracking_number, label):
+    def __init__(self, repo: Dict[str, str]):
         """Initialize the sensor."""
-        self._attributes = {}
-        self._name = CONF_NAME + " - " + label
-        self.tracking_number = tracking_number
+        super().__init__()
+        self.repo = repo["path"]
+        # self.attrs: Dict[str, Any] = {ATTR_PATH: self.repo}
+        self.attrs: Dict[str, Any] = {}
+        self._name = repo["name"]
         self._state = None
+        self._available = True
+
+    @property
+    def unique_id(self):
+        """Return the unique ID of the sensor."""
+        return self.repo
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return self._available
 
     @property
     def name(self):
@@ -77,11 +142,12 @@ class CanadaPostSensor(Entity):
     #         await self.async_update(no_throttle=True)
     #         self.async_write_ha_state()
 
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self, **kwargs):
         """Get the latest data from Canada Post API."""
+        _LOGGER.debug("Updating sensor data")
+
         session = async_get_clientsession(self.hass)
-        res = await session.get(API_URL.format(tracking_number=self.tracking_number))
+        res = await session.get(BASE_API_URL.format(tracking_number=self.repo))
 
         state = ""
         if res.status == HTTP_OK:
@@ -105,7 +171,7 @@ class CanadaPostSensor(Entity):
                 self._attributes = {ATTR_ATTRIBUTION: ATTRIBUTION}
         else:
             self._attributes = {ATTR_ATTRIBUTION: ATTRIBUTION}
-            _LOGGER.warning("Unable to fetch status for " + self.tracking_number)
+            _LOGGER.warning("Unable to fetch status for " + self.repo)
             state = "Unable to fetch status"
 
         self._state = state
