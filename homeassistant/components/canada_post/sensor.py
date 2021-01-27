@@ -27,6 +27,7 @@ from .const import (
     ICON,
     ATTRIBUTION,
     ATTR_ATTRIBUTION,
+    ATTR_TRACKING_NUMBER,
     ATTR_DATE,
     ATTR_LOCATION_ADDR,
     ATTR_TIME,
@@ -88,8 +89,10 @@ class CanadaPostSensor(Entity):
         """Initialize the sensor."""
         super().__init__()
         self.repo = repo["path"]
-        # self.attrs: Dict[str, Any] = {ATTR_PATH: self.repo}
-        self.attrs: Dict[str, Any] = {}
+        self.attrs: Dict[str, Any] = {
+            ATTR_TRACKING_NUMBER: repo["path"],
+            ATTR_ATTRIBUTION: ATTRIBUTION,
+        }
         self._name = repo["name"]
         self._state = None
         self._available = True
@@ -122,7 +125,7 @@ class CanadaPostSensor(Entity):
     @property
     def device_state_attributes(self):
         """Return attributes for the sensor."""
-        return self._attributes
+        return self.attrs
 
     @property
     def icon(self):
@@ -155,22 +158,17 @@ class CanadaPostSensor(Entity):
             try:
                 event = json_response["events"][0]
                 state = event["descEn"]
-                self._attributes = {
-                    ATTR_ATTRIBUTION: ATTRIBUTION,
-                    ATTR_LOCATION_ADDR: "{city}, {region_code}, {country_Code}".format(
+                self.attrs[ATTR_LOCATION_ADDR] = "{city}, {region_code}, {country_Code}".format(
                         city=event["locationAddr"]["city"],
                         region_code=event["locationAddr"]["regionCd"],
                         country_Code=event["locationAddr"]["countryCd"],
-                    ),
-                    ATTR_DATE: event["datetime"]["date"],
-                    ATTR_TIME: event["datetime"]["time"],
-                    ATTR_TIMEZONE: event["datetime"]["zoneOffset"],
-                }
+                    )
+                self.attrs[ATTR_DATE] = event["datetime"]["date"]
+                self.attrs[ATTR_TIME] = event["datetime"]["time"]
+                self.attrs[ATTR_TIMEZONE] = event["datetime"]["zoneOffset"]
             except KeyError:
                 state = json_response["error"]["descEn"]
-                self._attributes = {ATTR_ATTRIBUTION: ATTRIBUTION}
         else:
-            self._attributes = {ATTR_ATTRIBUTION: ATTRIBUTION}
             _LOGGER.warning("Unable to fetch status for " + self.repo)
             state = "Unable to fetch status"
 
