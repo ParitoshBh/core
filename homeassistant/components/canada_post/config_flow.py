@@ -115,6 +115,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> Dict[str, Any]:
         """Manage the options for the custom component."""
         errors: Dict[str, str] = {}
+        all_repos = {}
+        updated_repos = []
+
         # Grab all configured repos from the entity registry so we can populate the
         # multi-select dropdown that will allow a user to remove a repo.
         entity_registry = await async_get_registry(self.hass)
@@ -123,11 +126,17 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         )
 
         # Default value for our multi-select.
-        all_repos = {e.entity_id: e.original_name for e in entries}
+        for e in entries:
+            all_repos[e.entity_id] = e.original_name
+            updated_repos.append({
+                'name': e.original_name,
+                'path': e.unique_id
+            })
+
         repo_map = {e.entity_id: e for e in entries}
 
         if user_input is not None:
-            updated_repos = deepcopy(self.config_entry.data[CONF_REPOS])
+            # updated_repos = deepcopy(self.config_entry.data[CONF_REPOS])
 
             # Remove any unchecked repos.
             removed_entities = [
