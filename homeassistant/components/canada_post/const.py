@@ -27,6 +27,6 @@ ATTR_STARGAZERS = "stargazers"
 ATTR_VIEWS = "views"
 ATTR_VIEWS_UNIQUE = "views_unique"
 
-BASE_API_URL = "https://www.canadapost.ca/trackweb/rs/track/json/package/{tracking_number}/detail"
+BASE_API_URL = "https://www.canadapost-postescanada.ca/track-reperage/rs/track/json/package/{tracking_number}/detail"
 
 CONF_REPOS = "repositories"
