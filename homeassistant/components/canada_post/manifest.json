@@ -3,6 +3,7 @@
     "@ParitoshBh"
   ],
   "config_flow": true,
+  "version": "1.0",
   "dependencies": [],
   "documentation": "https://www.home-assistant.io/integrations/canada_post",
   "domain": "canada_post",
