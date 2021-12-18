@@ -3,7 +3,7 @@ from datetime import timedelta
 import logging
 from typing import Any, Callable, Dict, Optional
 
-from homeassistant.const import HTTP_OK
+from http import HTTPStatus
 from homeassistant import config_entries, core
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import (
@@ -153,7 +153,7 @@ class CanadaPostSensor(Entity):
         res = await session.get(BASE_API_URL.format(tracking_number=self.repo))
 
         state = ""
-        if res.status == HTTP_OK:
+        if res.status == HTTPStatus.OK:
             json_response = await res.json()
             try:
                 event = json_response["events"][0]
